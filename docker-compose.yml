@@ -1,0 +1,45 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - laqta-mongo-data:/data/db
+    networks:
+      - laqta-net
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/laqta
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@laqta.sa}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-now}
+      PORT: 4000
+    depends_on:
+      - mongo
+    ports:
+      - '4000:4000' # exposed so the mobile app can reach the API directly
+    networks:
+      - laqta-net
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:4000
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      NODE_ENV: production
+    depends_on:
+      - backend
+    ports:
+      - '3000:3000'
+    networks:
+      - laqta-net
+
+networks:
+  laqta-net:
+    driver: bridge
+
+volumes:
+  laqta-mongo-data:

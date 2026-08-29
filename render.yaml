@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: laqta-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 4000
+      # Paste your MongoDB Atlas connection string (mongodb+srv://...) —
+      # generated when you create the cluster, not stored in git.
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  - type: web
+    name: laqta-admin-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # After the backend deploys, copy its Render URL here (e.g.
+      # https://laqta-backend.onrender.com).
+      - key: BACKEND_URL
+        sync: false
+      # Must match the backend's JWT_SECRET exactly — the frontend verifies
+      # the admin session cookie locally.
+      - key: JWT_SECRET
+        sync: false
