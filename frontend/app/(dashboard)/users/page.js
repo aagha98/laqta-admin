@@ -1,11 +1,10 @@
-import { cookies } from 'next/headers';
 import { apiFetch } from '../../../lib/apiClient';
+import { requireAdminToken } from '../layout';
 
 export const dynamic = 'force-dynamic';
 
 export default async function UsersPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('admin_session').value;
+  const token = await requireAdminToken();
   const { users } = await apiFetch('/api/admin/users', token);
 
   return (

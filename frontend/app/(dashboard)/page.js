@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers';
 import { apiFetch } from '../../lib/apiClient';
+import { requireAdminToken } from './layout';
 
 function StatCard({ label, value }) {
   return (
@@ -11,8 +11,7 @@ function StatCard({ label, value }) {
 }
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('admin_session').value;
+  const token = await requireAdminToken();
   const stats = await apiFetch('/api/admin/requests/stats', token);
 
   return (
