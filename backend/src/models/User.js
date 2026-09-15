@@ -2,7 +2,10 @@ import mongoose from 'mongoose';
 
 const UserSchema = new mongoose.Schema(
   {
-    phoneNumber: { type: String, required: true, unique: true, index: true },
+    // Optional/sparse-unique: phone-signup users always have one, but
+    // Google-signup users may not add a phone number until later (or ever).
+    phoneNumber: { type: String, unique: true, sparse: true, index: true },
+    googleId: { type: String, unique: true, sparse: true, index: true },
     fullName: { type: String, default: '' },
     email: { type: String },
     carMake: { type: String, default: '' },

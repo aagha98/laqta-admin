@@ -13,11 +13,26 @@ const STATUS_STYLES = {
   cancelled: 'bg-red-100 text-red-700',
 };
 
+const EMPTY_OFFER_FORM = {
+  supplierName: '',
+  supplierCity: '',
+  supplierRating: '4.8',
+  supplierReviewCount: '0',
+  price: '',
+  conditionLabel: '',
+  conditionDescription: '',
+  qualityScore: '90',
+  warrantyDays: '30',
+  verified: true,
+  recommended: false,
+};
+
 export default function RequestsPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -109,51 +124,259 @@ export default function RequestsPage() {
               </tr>
             )}
             {requests.map((req) => (
-              <tr key={req._id} className="border-b border-border last:border-0">
-                <td className="px-4 py-3">
-                  <p className="font-medium text-ink">{req.title}</p>
-                  {req.subtitle && <p className="text-xs text-muted">{req.subtitle}</p>}
-                </td>
-                <td className="px-4 py-3 text-muted">{req.type}</td>
-                <td className="px-4 py-3 text-muted">
-                  {req.user?.fullName || req.user?.phoneNumber || '—'}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_STYLES[req.status] || ''}`}
-                  >
-                    {req.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-muted">
-                  {new Date(req.createdAt).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={req.status}
-                      onChange={(event) => updateStatus(req._id, event.target.value)}
-                      className="rounded-lg border border-border px-2 py-1 text-xs"
-                    >
-                      {STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => deleteRequest(req._id)}
-                      className="text-xs font-medium text-error hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
+              <RequestRow
+                key={req._id}
+                request={req}
+                expanded={expandedId === req._id}
+                onToggleExpand={() => setExpandedId(expandedId === req._id ? null : req._id)}
+                onUpdateStatus={updateStatus}
+                onDelete={deleteRequest}
+              />
             ))}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function RequestRow({ request: req, expanded, onToggleExpand, onUpdateStatus, onDelete }) {
+  return (
+    <>
+      <tr className="border-b border-border last:border-0">
+        <td className="px-4 py-3">
+          <p className="font-medium text-ink">{req.title}</p>
+          {req.subtitle && <p className="text-xs text-muted">{req.subtitle}</p>}
+        </td>
+        <td className="px-4 py-3 text-muted">{req.type}</td>
+        <td className="px-4 py-3 text-muted">
+          {req.user?.fullName || req.user?.phoneNumber || '—'}
+        </td>
+        <td className="px-4 py-3">
+          <span
+            className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_STYLES[req.status] || ''}`}
+          >
+            {req.status}
+          </span>
+        </td>
+        <td className="px-4 py-3 text-muted">{new Date(req.createdAt).toLocaleDateString()}</td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onToggleExpand}
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              {expanded ? 'Hide offers' : 'Offers'}
+            </button>
+            <select
+              value={req.status}
+              onChange={(event) => onUpdateStatus(req._id, event.target.value)}
+              className="rounded-lg border border-border px-2 py-1 text-xs"
+            >
+              {STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => onDelete(req._id)}
+              className="text-xs font-medium text-error hover:underline"
+            >
+              Delete
+            </button>
+          </div>
+        </td>
+      </tr>
+      {expanded && (
+        <tr className="border-b border-border bg-background/60">
+          <td colSpan={6} className="px-4 py-4">
+            <OffersPanel requestId={req._id} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function OffersPanel({ requestId }) {
+  const [offers, setOffers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(EMPTY_OFFER_FORM);
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const response = await fetch(`/api/admin/requests/${requestId}/offers`);
+    const data = await response.json();
+    setOffers(data.offers || []);
+    setLoading(false);
+  }, [requestId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function submitOffer(event) {
+    event.preventDefault();
+    if (!form.supplierName || !form.price) return;
+
+    setSubmitting(true);
+    await fetch(`/api/admin/requests/${requestId}/offers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...form,
+        price: Number(form.price),
+        supplierRating: Number(form.supplierRating) || 0,
+        supplierReviewCount: Number(form.supplierReviewCount) || 0,
+        qualityScore: Number(form.qualityScore) || 0,
+        warrantyDays: Number(form.warrantyDays) || 0,
+      }),
+    });
+    setForm(EMPTY_OFFER_FORM);
+    setShowForm(false);
+    setSubmitting(false);
+    load();
+  }
+
+  async function deleteOffer(offerId) {
+    await fetch(`/api/admin/requests/${requestId}/offers/${offerId}`, { method: 'DELETE' });
+    load();
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-surface p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="font-semibold text-ink">Offers ({offers.length})</h3>
+        <button
+          onClick={() => setShowForm((value) => !value)}
+          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white"
+        >
+          {showForm ? 'Cancel' : '+ Add offer'}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={submitOffer} className="mb-4 grid grid-cols-2 gap-2 rounded-lg bg-background p-3 sm:grid-cols-4">
+          <input
+            required
+            placeholder="Supplier name"
+            value={form.supplierName}
+            onChange={(e) => setForm({ ...form, supplierName: e.target.value })}
+            className="rounded-lg border border-border px-2 py-1.5 text-xs"
+          />
+          <input
+            placeholder="City"
+            value={form.supplierCity}
+            onChange={(e) => setForm({ ...form, supplierCity: e.target.value })}
+            className="rounded-lg border border-border px-2 py-1.5 text-xs"
+          />
+          <input
+            required
+            type="number"
+            placeholder="Price (SAR)"
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+            className="rounded-lg border border-border px-2 py-1.5 text-xs"
+          />
+          <input
+            type="number"
+            step="0.1"
+            placeholder="Rating (0-5)"
+            value={form.supplierRating}
+            onChange={(e) => setForm({ ...form, supplierRating: e.target.value })}
+            className="rounded-lg border border-border px-2 py-1.5 text-xs"
+          />
+          <input
+            type="number"
+            placeholder="Review count"
+            value={form.supplierReviewCount}
+            onChange={(e) => setForm({ ...form, supplierReviewCount: e.target.value })}
+            className="rounded-lg border border-border px-2 py-1.5 text-xs"
+          />
+          <input
+            placeholder="Condition label"
+            value={form.conditionLabel}
+            onChange={(e) => setForm({ ...form, conditionLabel: e.target.value })}
+            className="rounded-lg border border-border px-2 py-1.5 text-xs"
+          />
+          <input
+            type="number"
+            placeholder="Quality score (0-100)"
+            value={form.qualityScore}
+            onChange={(e) => setForm({ ...form, qualityScore: e.target.value })}
+            className="rounded-lg border border-border px-2 py-1.5 text-xs"
+          />
+          <input
+            type="number"
+            placeholder="Warranty days"
+            value={form.warrantyDays}
+            onChange={(e) => setForm({ ...form, warrantyDays: e.target.value })}
+            className="rounded-lg border border-border px-2 py-1.5 text-xs"
+          />
+          <input
+            placeholder="Condition description"
+            value={form.conditionDescription}
+            onChange={(e) => setForm({ ...form, conditionDescription: e.target.value })}
+            className="col-span-2 rounded-lg border border-border px-2 py-1.5 text-xs sm:col-span-4"
+          />
+          <label className="flex items-center gap-1.5 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={form.verified}
+              onChange={(e) => setForm({ ...form, verified: e.target.checked })}
+            />
+            Verified
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={form.recommended}
+              onChange={(e) => setForm({ ...form, recommended: e.target.checked })}
+            />
+            Best match / recommended
+          </label>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="col-span-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 sm:col-span-4"
+          >
+            {submitting ? 'Adding…' : 'Add offer'}
+          </button>
+        </form>
+      )}
+
+      {loading && <p className="text-xs text-muted">Loading offers…</p>}
+      {!loading && offers.length === 0 && <p className="text-xs text-muted">No offers yet.</p>}
+      {!loading && offers.length > 0 && (
+        <div className="space-y-2">
+          {offers.map((offer) => (
+            <div
+              key={offer._id}
+              className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-xs"
+            >
+              <div>
+                <p className="font-medium text-ink">
+                  {offer.supplierName} {offer.verified && '✓'}
+                  {offer.recommended && <span className="ml-1 text-accent">★ best match</span>}
+                </p>
+                <p className="text-muted">
+                  {offer.supplierCity} • {offer.price} SAR • quality {offer.qualityScore}% •{' '}
+                  {offer.warrantyDays}d warranty • {offer.status}
+                </p>
+              </div>
+              <button
+                onClick={() => deleteOffer(offer._id)}
+                className="font-medium text-error hover:underline"
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

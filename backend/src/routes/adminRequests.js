@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Request from '../models/Request.js';
 import User from '../models/User.js';
+import Offer from '../models/Offer.js';
 import { requireAdmin } from '../auth.js';
 import { asyncHandler } from '../asyncHandler.js';
 
@@ -69,6 +70,76 @@ router.delete(
   asyncHandler(async (req, res) => {
     const deleted = await Request.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Request not found' });
+    res.json({ ok: true });
+  }),
+);
+
+// There's no separate supplier-facing app yet, so the admin dashboard is how
+// offers get entered into the system on a supplier's behalf.
+router.get(
+  '/:id/offers',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const offers = await Offer.find({ request: req.params.id }).sort({ createdAt: -1 });
+    res.json({ offers });
+  }),
+);
+
+router.post(
+  '/:id/offers',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const request = await Request.findById(req.params.id);
+    if (!request) return res.status(404).json({ error: 'Request not found' });
+
+    const {
+      supplierName,
+      supplierCity,
+      supplierRating,
+      supplierReviewCount,
+      verified,
+      price,
+      conditionLabel,
+      conditionDescription,
+      qualityScore,
+      warrantyDays,
+      recommended,
+    } = req.body || {};
+
+    if (!supplierName || price == null) {
+      return res.status(400).json({ error: 'supplierName and price are required.' });
+    }
+
+    const offer = await Offer.create({
+      request: request._id,
+      supplierName,
+      supplierCity: supplierCity || '',
+      supplierRating: supplierRating || 0,
+      supplierReviewCount: supplierReviewCount || 0,
+      verified: Boolean(verified),
+      price,
+      conditionLabel: conditionLabel || '',
+      conditionDescription: conditionDescription || '',
+      qualityScore: qualityScore || 0,
+      warrantyDays: warrantyDays ?? 30,
+      recommended: Boolean(recommended),
+    });
+
+    if (request.status === 'submitted') {
+      request.status = 'underReview';
+      await request.save();
+    }
+
+    res.status(201).json({ offer });
+  }),
+);
+
+router.delete(
+  '/:id/offers/:offerId',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const deleted = await Offer.findOneAndDelete({ _id: req.params.offerId, request: req.params.id });
+    if (!deleted) return res.status(404).json({ error: 'Offer not found' });
     res.json({ ok: true });
   }),
 );

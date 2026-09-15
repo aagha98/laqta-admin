@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import { connectToDatabase } from './db.js';
 import { seedAdmin } from './seedAdmin.js';
 import otpRoutes from './routes/otp.js';
+import googleAuthRoutes from './routes/googleAuth.js';
 import adminAuthRoutes from './routes/adminAuth.js';
 import usersRoutes from './routes/users.js';
 import requestsRoutes from './routes/requests.js';
@@ -17,6 +18,7 @@ app.use(express.json());
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.use('/api/auth', otpRoutes);
+app.use('/api/auth/google', googleAuthRoutes);
 app.use('/api/auth/admin', adminAuthRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/requests', requestsRoutes);

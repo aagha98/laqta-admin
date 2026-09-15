@@ -15,6 +15,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@laqta.sa}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-now}
+      GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
       PORT: 4000
     depends_on:
       - mongo

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Request from '../models/Request.js';
+import Offer from '../models/Offer.js';
 import { requireUser } from '../auth.js';
 import { asyncHandler } from '../asyncHandler.js';
 
@@ -53,6 +54,58 @@ router.delete(
 
     if (!updated) return res.status(404).json({ error: 'Request not found' });
     res.json({ request: updated });
+  }),
+);
+
+// Verifies the request belongs to the caller before touching its offers —
+// used by both the list and accept routes below.
+async function loadOwnRequest(req, res) {
+  const request = await Request.findOne({ _id: req.params.id, user: req.userId });
+  if (!request) {
+    res.status(404).json({ error: 'Request not found' });
+    return null;
+  }
+  return request;
+}
+
+router.get(
+  '/:id/offers',
+  requireUser,
+  asyncHandler(async (req, res) => {
+    const request = await loadOwnRequest(req, res);
+    if (!request) return;
+
+    const offers = await Offer.find({ request: request._id }).sort({
+      recommended: -1,
+      qualityScore: -1,
+      price: 1,
+    });
+    res.json({ offers });
+  }),
+);
+
+router.patch(
+  '/:id/offers/:offerId/accept',
+  requireUser,
+  asyncHandler(async (req, res) => {
+    const request = await loadOwnRequest(req, res);
+    if (!request) return;
+
+    const accepted = await Offer.findOneAndUpdate(
+      { _id: req.params.offerId, request: request._id },
+      { status: 'accepted' },
+      { new: true },
+    );
+    if (!accepted) return res.status(404).json({ error: 'Offer not found' });
+
+    await Offer.updateMany(
+      { request: request._id, _id: { $ne: accepted._id } },
+      { status: 'rejected' },
+    );
+    request.status = 'matched';
+    await request.save();
+
+    res.json({ offer: accepted, request });
   }),
 );
 
