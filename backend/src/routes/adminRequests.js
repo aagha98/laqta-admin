@@ -59,11 +59,23 @@ router.get(
     if (status) filter.status = status;
     if (type) filter.type = type;
 
+    await Request.expireStale();
     const requests = await Request.find(filter)
       .populate('user', 'fullName phoneNumber city')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+    const counts = await Offer.aggregate([
+      { $match: { request: { $in: requests.map((r) => r._id) } } },
+      { $group: { _id: '$request', count: { $sum: 1 } } },
+    ]);
+    const countByRequest = new Map(counts.map((c) => [String(c._id), c.count]));
 
-    res.json({ requests });
+    res.json({
+      requests: requests.map((r) => ({
+        ...r,
+        offersCount: countByRequest.get(String(r._id)) ?? 0,
+      })),
+    });
   }),
 );
 

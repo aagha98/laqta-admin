@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { verifyToken } from '../../lib/auth';
-import LogoutButton from './LogoutButton';
+import { apiFetch } from '../../lib/apiClient';
+import Sidebar from '../../components/Sidebar';
 
 export async function requireAdminToken() {
   const cookieStore = await cookies();
@@ -17,33 +17,22 @@ export async function requireAdminToken() {
 }
 
 export default async function DashboardLayout({ children }) {
-  await requireAdminToken();
+  const token = await requireAdminToken();
+  let counts = {};
+  try {
+    const stats = await apiFetch('/api/admin/requests/stats', token);
+    counts = {
+      activeRequests: (stats.submitted ?? 0) + (stats.underReview ?? 0),
+      pendingSuppliers: stats.pendingSuppliers ?? 0,
+    };
+  } catch {
+    counts = {};
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-8">
-            <span className="text-lg font-bold text-ink">LAQTA Admin</span>
-            <nav className="flex gap-6 text-sm font-medium text-muted">
-              <Link href="/" className="hover:text-ink">
-                Dashboard
-              </Link>
-              <Link href="/requests" className="hover:text-ink">
-                Requests
-              </Link>
-              <Link href="/users" className="hover:text-ink">
-                Users
-              </Link>
-              <Link href="/suppliers" className="hover:text-ink">
-                Suppliers
-              </Link>
-            </nav>
-          </div>
-          <LogoutButton />
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+    <div className="mx-auto flex max-w-[1600px] gap-6 p-4 lg:p-6">
+      <Sidebar counts={counts} adminEmail={process.env.ADMIN_EMAIL || ''} />
+      <main className="min-w-0 flex-1">{children}</main>
     </div>
   );
 }

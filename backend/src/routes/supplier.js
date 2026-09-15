@@ -7,6 +7,7 @@ import { requireUser, requireApprovedSupplier } from '../auth.js';
 import { asyncHandler } from '../asyncHandler.js';
 import { isValidCategory } from '../constants/categories.js';
 import { notify } from '../notifications.js';
+import { containsContactInfo } from '../constants/moderation.js';
 
 const router = Router();
 
@@ -16,20 +17,6 @@ const CONDITION_LABELS = ['likeNew', 'excellent', 'average', 'refurbished'];
 // (2025 Commercial Register Law) starts with 7; legacy CRs start with a
 // region code whose first digit is 1-5 (1010 Riyadh, 2050 Dammam, 4030 Jeddah...).
 const CR_NUMBER_PATTERN = /^[1-57]\d{9}$/;
-
-// Offers stay anonymous until accepted, so text fields must not leak a way
-// to contact the supplier directly.
-const CONTACT_PATTERNS = [
-  /(?:\+?966|0)?5\d{8}/, // Saudi mobile
-  /\d{3}[\s-]?\d{3}[\s-]?\d{4}/, // generic phone shapes
-  /whats?app|واتس|وتس|snap|سناب|insta|انستا|تلقرام|telegram/i,
-  /@[\w.]+/,
-  /https?:\/\/|www\./i,
-];
-
-function containsContactInfo(text) {
-  return CONTACT_PATTERNS.some((pattern) => pattern.test(text || ''));
-}
 
 function supplierProfileResponse(user) {
   return {

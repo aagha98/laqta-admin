@@ -15,6 +15,8 @@ import statsRoutes from './routes/stats.js';
 import adminRequestsRoutes from './routes/adminRequests.js';
 import adminUsersRoutes from './routes/adminUsers.js';
 import adminSuppliersRoutes from './routes/adminSuppliers.js';
+import adminDashboardRoutes from './routes/adminDashboard.js';
+import adminOffersRoutes from './routes/adminOffers.js';
 
 const app = express();
 app.use(cors());
@@ -35,6 +37,8 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/admin/requests', adminRequestsRoutes);
 app.use('/api/admin/users', adminUsersRoutes);
 app.use('/api/admin/suppliers', adminSuppliersRoutes);
+app.use('/api/admin/dashboard', adminDashboardRoutes);
+app.use('/api/admin/offers', adminOffersRoutes);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {

@@ -1,383 +1,351 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import {
+  Badge,
+  Countdown,
+  Drawer,
+  EmptyState,
+  Field,
+  GlassCard,
+  Pagination,
+  Photo,
+  Segmented,
+  Skeleton,
+  Stars,
+  Tag,
+} from '../../../components/ui';
+import {
+  CATEGORY,
+  CONDITION,
+  OFFER_STATUS,
+  REQUEST_TYPE,
+  STATUS,
+  formatDate,
+  formatSar,
+  timeAgo,
+  vehicleLabel,
+} from '../../../lib/labels';
 
-const STATUSES = ['submitted', 'underReview', 'matched', 'completed', 'cancelled', 'expired'];
-const TYPES = ['spareParts', 'sellCar'];
-
-const STATUS_STYLES = {
-  submitted: 'bg-blue-100 text-blue-800',
-  underReview: 'bg-accent/20 text-ink',
-  matched: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-700',
-  expired: 'bg-gray-200 text-gray-700',
-};
-
-const EMPTY_OFFER_FORM = {
-  supplierName: '',
-  supplierCity: '',
-  supplierRating: '4.8',
-  supplierReviewCount: '0',
-  price: '',
-  conditionLabel: '',
-  conditionDescription: '',
-  qualityScore: '90',
-  warrantyDays: '30',
-  verified: true,
-  recommended: false,
-};
+const PAGE_SIZE = 12;
+const STATUS_ORDER = ['submitted', 'underReview', 'matched', 'completed', 'cancelled', 'expired'];
 
 export default function RequestsPage() {
+  return (
+    <Suspense fallback={<Skeleton rows={8} />}>
+      <RequestsPageInner />
+    </Suspense>
+  );
+}
+
+function RequestsPageInner() {
+  const params = useSearchParams();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [expandedId, setExpandedId] = useState(null);
+  const [status, setStatus] = useState(params.get('status') || '');
+  const [category, setCategory] = useState('');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (statusFilter) params.set('status', statusFilter);
-    if (typeFilter) params.set('type', typeFilter);
-
-    const response = await fetch(`/api/admin/requests?${params.toString()}`);
+    const response = await fetch('/api/admin/requests');
     const data = await response.json();
     setRequests(data.requests || []);
     setLoading(false);
-  }, [statusFilter, typeFilter]);
+  }, []);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  async function updateStatus(id, status) {
-    await fetch(`/api/admin/requests/${id}`, {
+  const counts = useMemo(() => {
+    const c = { '': requests.length };
+    for (const r of requests) c[r.status] = (c[r.status] ?? 0) + 1;
+    return c;
+  }, [requests]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return requests.filter((r) => {
+      if (status && r.status !== status) return false;
+      if (category && r.category !== category) return false;
+      if (!q) return true;
+      const hay = [r.title, r.subtitle, r.city, r.user?.fullName, r.user?.phoneNumber, r._id]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [requests, status, category, query]);
+
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => setPage(1), [status, category, query]);
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary-bright">الطلبات</p>
+          <h1 className="text-2xl font-bold text-white">طلبات القطع</h1>
+          <p className="mt-1 text-sm text-muted">
+            كل طلب يبقى مفتوحًا 72 ساعة للموردين. بعد اختيار عرض تنكشف بيانات الطرفين.
+          </p>
+        </div>
+        <button type="button" onClick={load} className="btn-ghost">
+          ↻ تحديث
+        </button>
+      </header>
+
+      <GlassCard padded={false}>
+        <div className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-4">
+          <input
+            type="search"
+            placeholder="ابحث بالقطعة، السيارة، المدينة أو المشتري…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="input max-w-sm flex-1"
+          />
+          <select value={category} onChange={(e) => setCategory(e.target.value)} className="input w-auto">
+            <option value="">كل الفئات</option>
+            {Object.entries(CATEGORY).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
+          <div className="ms-auto overflow-x-auto">
+            <Segmented
+              value={status}
+              onChange={setStatus}
+              options={[
+                { value: '', label: 'الكل', count: counts[''] },
+                ...STATUS_ORDER.map((s) => ({ value: s, label: STATUS[s].label, count: counts[s] ?? 0 })),
+              ]}
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <Skeleton rows={8} />
+        ) : pageItems.length === 0 ? (
+          <EmptyState icon="⚙" title="لا توجد طلبات مطابقة" body="جرّب تغيير الفلاتر أو البحث." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-sm">
+              <thead>
+                <tr className="table-head text-start">
+                  <th className="px-5 text-start font-semibold">القطعة والسيارة</th>
+                  <th className="px-3 text-start font-semibold">الفئة</th>
+                  <th className="px-3 text-start font-semibold">المشتري</th>
+                  <th className="px-3 text-start font-semibold">المدينة</th>
+                  <th className="px-3 text-center font-semibold">العروض</th>
+                  <th className="px-3 text-start font-semibold">المتبقي</th>
+                  <th className="px-3 text-start font-semibold">الحالة</th>
+                  <th className="px-5 text-start font-semibold">أُنشئ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageItems.map((r) => (
+                  <tr key={r._id} onClick={() => setSelected(r)} className="table-row h-14 cursor-pointer">
+                    <td className="px-5">
+                      <div className="flex items-center gap-3">
+                        <Photo id={r.photos?.[0]} />
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold text-ink">{r.title}</div>
+                          <div className="truncate text-xs text-muted">{vehicleLabel(r)}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3">
+                      <Tag>{r.type === 'sellCar' ? REQUEST_TYPE.sellCar : CATEGORY[r.category] ?? '—'}</Tag>
+                    </td>
+                    <td className="px-3">
+                      <div className="text-ink">{r.user?.fullName || '—'}</div>
+                      <div className="num text-xs text-muted" dir="ltr">
+                        {r.user?.phoneNumber ? `+966 ${r.user.phoneNumber}` : ''}
+                      </div>
+                    </td>
+                    <td className="px-3 text-muted">{r.city || r.user?.city || '—'}</td>
+                    <td className="num px-3 text-center font-semibold text-white">{r.offersCount ?? 0}</td>
+                    <td className="px-3">
+                      <Countdown expiresAt={r.expiresAt} status={r.status} />
+                    </td>
+                    <td className="px-3">
+                      <Badge tone={STATUS[r.status]?.tone}>{STATUS[r.status]?.label ?? r.status}</Badge>
+                    </td>
+                    <td className="num px-5 text-xs text-muted">{timeAgo(r.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} onChange={setPage} />
+      </GlassCard>
+
+      <RequestDrawer request={selected} onClose={() => setSelected(null)} onChanged={load} />
+    </div>
+  );
+}
+
+function RequestDrawer({ request, onClose, onChanged }) {
+  const [offers, setOffers] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!request) return;
+    setOffers(null);
+    fetch(`/api/admin/requests/${request._id}/offers`)
+      .then((r) => r.json())
+      .then((d) => setOffers(d.offers || []));
+  }, [request]);
+
+  async function updateStatus(status) {
+    setBusy(true);
+    await fetch(`/api/admin/requests/${request._id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
-    load();
+    setBusy(false);
+    onChanged();
+    onClose();
   }
 
-  async function deleteRequest(id) {
-    if (!confirm('Delete this request permanently?')) return;
-    await fetch(`/api/admin/requests/${id}`, { method: 'DELETE' });
-    load();
-  }
+  if (!request) return null;
+  const accepted = offers?.find((o) => o.status === 'accepted');
+  const details = Object.entries(request.details || {});
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold text-ink">Requests</h1>
-
-      <div className="mb-4 flex gap-3">
-        <select
-          value={typeFilter}
-          onChange={(event) => setTypeFilter(event.target.value)}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-        >
-          <option value="">All types</option>
-          {TYPES.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-        >
-          <option value="">All statuses</option>
-          {STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-muted">
-              <th className="px-4 py-3">Title</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">User</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-muted">
-                  Loading…
-                </td>
-              </tr>
-            )}
-            {!loading && requests.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-muted">
-                  No requests found.
-                </td>
-              </tr>
-            )}
-            {requests.map((req) => (
-              <RequestRow
-                key={req._id}
-                request={req}
-                expanded={expandedId === req._id}
-                onToggleExpand={() => setExpandedId(expandedId === req._id ? null : req._id)}
-                onUpdateStatus={updateStatus}
-                onDelete={deleteRequest}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function RequestRow({ request: req, expanded, onToggleExpand, onUpdateStatus, onDelete }) {
-  return (
-    <>
-      <tr className="border-b border-border last:border-0">
-        <td className="px-4 py-3">
-          <p className="font-medium text-ink">{req.title}</p>
-          {req.subtitle && <p className="text-xs text-muted">{req.subtitle}</p>}
-        </td>
-        <td className="px-4 py-3 text-muted">{req.type}</td>
-        <td className="px-4 py-3 text-muted">
-          {req.user?.fullName || req.user?.phoneNumber || '—'}
-        </td>
-        <td className="px-4 py-3">
-          <span
-            className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_STYLES[req.status] || ''}`}
-          >
-            {req.status}
-          </span>
-        </td>
-        <td className="px-4 py-3 text-muted">{new Date(req.createdAt).toLocaleDateString()}</td>
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onToggleExpand}
-              className="text-xs font-medium text-primary hover:underline"
-            >
-              {expanded ? 'Hide offers' : 'Offers'}
-            </button>
-            <select
-              value={req.status}
-              onChange={(event) => onUpdateStatus(req._id, event.target.value)}
-              className="rounded-lg border border-border px-2 py-1 text-xs"
-            >
-              {STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => onDelete(req._id)}
-              className="text-xs font-medium text-error hover:underline"
-            >
-              Delete
-            </button>
-          </div>
-        </td>
-      </tr>
-      {expanded && (
-        <tr className="border-b border-border bg-background/60">
-          <td colSpan={6} className="px-4 py-4">
-            <OffersPanel requestId={req._id} />
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
-function OffersPanel({ requestId }) {
-  const [offers, setOffers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(EMPTY_OFFER_FORM);
-  const [submitting, setSubmitting] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    const response = await fetch(`/api/admin/requests/${requestId}/offers`);
-    const data = await response.json();
-    setOffers(data.offers || []);
-    setLoading(false);
-  }, [requestId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  async function submitOffer(event) {
-    event.preventDefault();
-    if (!form.supplierName || !form.price) return;
-
-    setSubmitting(true);
-    await fetch(`/api/admin/requests/${requestId}/offers`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...form,
-        price: Number(form.price),
-        supplierRating: Number(form.supplierRating) || 0,
-        supplierReviewCount: Number(form.supplierReviewCount) || 0,
-        qualityScore: Number(form.qualityScore) || 0,
-        warrantyDays: Number(form.warrantyDays) || 0,
-      }),
-    });
-    setForm(EMPTY_OFFER_FORM);
-    setShowForm(false);
-    setSubmitting(false);
-    load();
-  }
-
-  async function deleteOffer(offerId) {
-    await fetch(`/api/admin/requests/${requestId}/offers/${offerId}`, { method: 'DELETE' });
-    load();
-  }
-
-  return (
-    <div className="rounded-xl border border-border bg-surface p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-semibold text-ink">Offers ({offers.length})</h3>
-        <button
-          onClick={() => setShowForm((value) => !value)}
-          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white"
-        >
-          {showForm ? 'Cancel' : '+ Add offer'}
-        </button>
-      </div>
-
-      {showForm && (
-        <form onSubmit={submitOffer} className="mb-4 grid grid-cols-2 gap-2 rounded-lg bg-background p-3 sm:grid-cols-4">
-          <input
-            required
-            placeholder="Supplier name"
-            value={form.supplierName}
-            onChange={(e) => setForm({ ...form, supplierName: e.target.value })}
-            className="rounded-lg border border-border px-2 py-1.5 text-xs"
-          />
-          <input
-            placeholder="City"
-            value={form.supplierCity}
-            onChange={(e) => setForm({ ...form, supplierCity: e.target.value })}
-            className="rounded-lg border border-border px-2 py-1.5 text-xs"
-          />
-          <input
-            required
-            type="number"
-            placeholder="Price (SAR)"
-            value={form.price}
-            onChange={(e) => setForm({ ...form, price: e.target.value })}
-            className="rounded-lg border border-border px-2 py-1.5 text-xs"
-          />
-          <input
-            type="number"
-            step="0.1"
-            placeholder="Rating (0-5)"
-            value={form.supplierRating}
-            onChange={(e) => setForm({ ...form, supplierRating: e.target.value })}
-            className="rounded-lg border border-border px-2 py-1.5 text-xs"
-          />
-          <input
-            type="number"
-            placeholder="Review count"
-            value={form.supplierReviewCount}
-            onChange={(e) => setForm({ ...form, supplierReviewCount: e.target.value })}
-            className="rounded-lg border border-border px-2 py-1.5 text-xs"
-          />
-          <input
-            placeholder="Condition label"
-            value={form.conditionLabel}
-            onChange={(e) => setForm({ ...form, conditionLabel: e.target.value })}
-            className="rounded-lg border border-border px-2 py-1.5 text-xs"
-          />
-          <input
-            type="number"
-            placeholder="Quality score (0-100)"
-            value={form.qualityScore}
-            onChange={(e) => setForm({ ...form, qualityScore: e.target.value })}
-            className="rounded-lg border border-border px-2 py-1.5 text-xs"
-          />
-          <input
-            type="number"
-            placeholder="Warranty days"
-            value={form.warrantyDays}
-            onChange={(e) => setForm({ ...form, warrantyDays: e.target.value })}
-            className="rounded-lg border border-border px-2 py-1.5 text-xs"
-          />
-          <input
-            placeholder="Condition description"
-            value={form.conditionDescription}
-            onChange={(e) => setForm({ ...form, conditionDescription: e.target.value })}
-            className="col-span-2 rounded-lg border border-border px-2 py-1.5 text-xs sm:col-span-4"
-          />
-          <label className="flex items-center gap-1.5 text-xs text-muted">
-            <input
-              type="checkbox"
-              checked={form.verified}
-              onChange={(e) => setForm({ ...form, verified: e.target.checked })}
-            />
-            Verified
-          </label>
-          <label className="flex items-center gap-1.5 text-xs text-muted">
-            <input
-              type="checkbox"
-              checked={form.recommended}
-              onChange={(e) => setForm({ ...form, recommended: e.target.checked })}
-            />
-            Best match / recommended
-          </label>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="col-span-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 sm:col-span-4"
-          >
-            {submitting ? 'Adding…' : 'Add offer'}
-          </button>
-        </form>
-      )}
-
-      {loading && <p className="text-xs text-muted">Loading offers…</p>}
-      {!loading && offers.length === 0 && <p className="text-xs text-muted">No offers yet.</p>}
-      {!loading && offers.length > 0 && (
-        <div className="space-y-2">
-          {offers.map((offer) => (
-            <div
-              key={offer._id}
-              className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-xs"
-            >
-              <div>
-                <p className="font-medium text-ink">
-                  {offer.supplierName} {offer.verified && '✓'}
-                  {offer.recommended && <span className="ml-1 text-accent">★ best match</span>}
-                </p>
-                <p className="text-muted">
-                  {offer.supplierCity} • {offer.price} SAR • quality {offer.qualityScore}% •{' '}
-                  {offer.warrantyDays}d warranty • {offer.status}
-                </p>
-              </div>
-              <button
-                onClick={() => deleteOffer(offer._id)}
-                className="font-medium text-error hover:underline"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
+    <Drawer open={Boolean(request)} onClose={onClose} title={request.title}>
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={STATUS[request.status]?.tone}>{STATUS[request.status]?.label}</Badge>
+          <Tag>{request.type === 'sellCar' ? REQUEST_TYPE.sellCar : CATEGORY[request.category]}</Tag>
+          <Countdown expiresAt={request.expiresAt} status={request.status} />
+          <span className="num ms-auto text-xs text-muted">#{request._id.slice(-6).toUpperCase()}</span>
         </div>
-      )}
-    </div>
+
+        {request.photos?.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto">
+            {request.photos.map((id) => (
+              <Photo key={id} id={id} size="h-28 w-36" />
+            ))}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="السيارة">{vehicleLabel(request) || '—'}</Field>
+          <Field label="المدينة">{request.city || request.user?.city || '—'}</Field>
+          <Field label="المشتري">{request.user?.fullName || '—'}</Field>
+          <Field label="الجوال">
+            <span className="num" dir="ltr">
+              {request.user?.phoneNumber ? `+966 ${request.user.phoneNumber}` : '—'}
+            </span>
+          </Field>
+          <Field label="أُنشئ">{formatDate(request.createdAt)}</Field>
+          <Field label="ينتهي">{formatDate(request.expiresAt)}</Field>
+        </div>
+
+        {details.length > 0 && (
+          <div className="rounded-xl border border-line bg-white/[0.02] p-4">
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">تفاصيل الطلب</div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+              {details.map(([k, v]) => (
+                <div key={k} className="contents">
+                  <dt className="text-muted">{k}</dt>
+                  <dd className="text-ink">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+
+        {request.rating?.stars && (
+          <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/5 p-3">
+            <Stars value={request.rating.stars} />
+            <span className="text-sm text-ink">قيّم المشتري المورد {request.rating.stars}/5</span>
+            {request.rating.comment && <span className="text-xs text-muted">— {request.rating.comment}</span>}
+          </div>
+        )}
+
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-semibold text-white">العروض</h3>
+            {offers && <span className="num text-xs text-muted">{offers.length} عرض</span>}
+          </div>
+          {offers == null ? (
+            <Skeleton rows={2} />
+          ) : offers.length === 0 ? (
+            <EmptyState icon="◈" title="لا توجد عروض بعد" />
+          ) : (
+            <ul className="space-y-2">
+              {offers.map((o) => (
+                <li
+                  key={o._id}
+                  className={`rounded-xl border p-3 ${
+                    o.status === 'accepted' ? 'border-success/40 bg-success/5' : 'border-line bg-white/[0.02]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Photo id={o.photos?.[0]} size="h-12 w-12" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-semibold text-ink">{o.supplierName}</span>
+                        {o.supplier ? <Tag>من التطبيق</Tag> : <Tag>يدوي</Tag>}
+                      </div>
+                      <div className="text-xs text-muted">
+                        {o.supplierCity} • {CONDITION[o.conditionLabel] ?? o.conditionLabel} • ضمان {o.warrantyDays} يوم
+                      </div>
+                    </div>
+                    <div className="text-end">
+                      <div className="num font-bold text-accent-bright">{formatSar(o.price)}</div>
+                      <Badge tone={OFFER_STATUS[o.status]?.tone}>{OFFER_STATUS[o.status]?.label}</Badge>
+                    </div>
+                  </div>
+                  {o.conditionDescription && (
+                    <p className="mt-2 text-xs text-muted">{o.conditionDescription}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {accepted?.supplier && (
+          <div className="rounded-xl border border-line bg-white/[0.02] p-4 text-sm">
+            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">المورد المختار</div>
+            <div className="text-ink">
+              {accepted.supplier.supplier?.shopName} — {accepted.supplier.fullName}
+            </div>
+            <div className="num text-xs text-muted" dir="ltr">
+              +966 {accepted.supplier.phoneNumber}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2 border-t border-line pt-4">
+          {['submitted', 'underReview'].includes(request.status) && (
+            <button type="button" disabled={busy} onClick={() => updateStatus('cancelled')} className="btn-danger">
+              إلغاء الطلب
+            </button>
+          )}
+          {request.status === 'matched' && (
+            <button type="button" disabled={busy} onClick={() => updateStatus('completed')} className="btn-secondary">
+              تعليم كمكتمل
+            </button>
+          )}
+          {['cancelled', 'expired'].includes(request.status) && (
+            <button type="button" disabled={busy} onClick={() => updateStatus('submitted')} className="btn-secondary">
+              إعادة فتح الطلب
+            </button>
+          )}
+        </div>
+      </div>
+    </Drawer>
   );
 }

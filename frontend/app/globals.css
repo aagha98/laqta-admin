@@ -2,7 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark;
+}
+
+html,
 body {
-  background-color: #F3F7F6;
-  color: #12211E;
+  background-color: #0b1412;
+  color: #dbe5e1;
+  min-height: 100%;
+}
+
+body {
+  background-image:
+    radial-gradient(900px 500px at 90% -10%, rgba(14, 165, 160, 0.14), transparent 60%),
+    radial-gradient(700px 400px at 0% 100%, rgba(255, 176, 32, 0.06), transparent 60%);
+  background-attachment: fixed;
+}
+
+@layer components {
+  .glass {
+    @apply rounded-2xl border border-line shadow-glass;
+    background: rgba(13, 27, 24, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 8px 32px -4px rgba(0, 0, 0, 0.5);
+  }
+  .glass-raised {
+    @apply glass;
+    background: rgba(17, 34, 30, 0.9);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .input {
+    @apply w-full rounded-lg border px-3 py-2 text-sm text-ink outline-none transition;
+    background: rgba(7, 14, 12, 0.65);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  .input:focus {
+    border-color: #0ea5a0;
+    box-shadow: 0 0 0 3px rgba(14, 165, 160, 0.18);
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-canvas transition hover:shadow-glow disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold text-primary-bright transition disabled:opacity-50;
+    background: rgba(14, 165, 160, 0.1);
+    border-color: rgba(14, 165, 160, 0.4);
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink transition hover:bg-white/5 disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold text-danger transition hover:bg-danger hover:text-white disabled:opacity-50;
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+  .table-head {
+    @apply h-10 text-[11px] font-semibold uppercase tracking-wider;
+    color: rgba(14, 165, 160, 0.85);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .table-row {
+    @apply transition;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .table-row:hover {
+    background: rgba(14, 165, 160, 0.06);
+  }
+  .num {
+    font-family: Inter, 'IBM Plex Sans', system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  border: 2px solid #0b1412;
 }

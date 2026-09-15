@@ -14,7 +14,6 @@ export default function LoginPage() {
     event.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const response = await fetch('/api/session', {
         method: 'POST',
@@ -22,12 +21,10 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
-
       if (!response.ok) {
-        setError(data.error || 'Something went wrong.');
+        setError(data.error || 'تعذر تسجيل الدخول.');
         return;
       }
-
       router.push('/');
       router.refresh();
     } finally {
@@ -36,40 +33,49 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm rounded-2xl border border-border bg-surface p-8 shadow-sm"
-      >
-        <h1 className="mb-1 text-2xl font-bold text-ink">LAQTA Admin</h1>
-        <p className="mb-6 text-sm text-muted">Sign in to manage requests and users.</p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      <div className="pointer-events-none absolute -top-32 end-1/4 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 start-1/4 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
 
-        <label className="mb-1 block text-sm text-muted">Email</label>
+      <form onSubmit={handleSubmit} className="glass-raised relative w-full max-w-sm p-8">
+        <div className="mb-6 flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-primary/15 text-xl text-primary-bright shadow-glow">
+            ⚙
+          </span>
+          <div>
+            <h1 className="text-xl font-bold text-white">لقطة</h1>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary-bright">
+              لوحة الإدارة
+            </p>
+          </div>
+        </div>
+
+        <label className="mb-1 block text-xs font-semibold text-muted">البريد الإلكتروني</label>
         <input
           type="email"
+          dir="ltr"
           required
+          autoComplete="username"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="mb-4 w-full rounded-lg border border-border px-3 py-2 outline-none focus:border-primary"
+          className="input mb-4"
         />
 
-        <label className="mb-1 block text-sm text-muted">Password</label>
+        <label className="mb-1 block text-xs font-semibold text-muted">كلمة المرور</label>
         <input
           type="password"
+          dir="ltr"
           required
+          autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="mb-4 w-full rounded-lg border border-border px-3 py-2 outline-none focus:border-primary"
+          className="input mb-5"
         />
 
-        {error && <p className="mb-4 text-sm text-error">{error}</p>}
+        {error && <p className="mb-4 text-sm text-danger">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-primary py-2 font-semibold text-white transition disabled:opacity-60"
-        >
-          {loading ? 'Signing in…' : 'Sign in'}
+        <button type="submit" disabled={loading} className="btn-primary w-full !py-2.5">
+          {loading ? 'جارٍ الدخول…' : 'تسجيل الدخول'}
         </button>
       </form>
     </div>
