@@ -12,6 +12,11 @@ const router = Router();
 
 const CONDITION_LABELS = ['likeNew', 'excellent', 'average', 'refurbished'];
 
+// Saudi commercial registration: 10 digits. The unified national number
+// (2025 Commercial Register Law) starts with 7; legacy CRs start with a
+// region code whose first digit is 1-5 (1010 Riyadh, 2050 Dammam, 4030 Jeddah...).
+const CR_NUMBER_PATTERN = /^[1-57]\d{9}$/;
+
 // Offers stay anonymous until accepted, so text fields must not leak a way
 // to contact the supplier directly.
 const CONTACT_PATTERNS = [
@@ -48,6 +53,12 @@ router.post(
       return res.status(400).json({ error: 'Shop name is required.' });
     }
     if (!city) return res.status(400).json({ error: 'City is required.' });
+    const cr = String(licenseNumber || '').trim();
+    if (!CR_NUMBER_PATTERN.test(cr)) {
+      return res.status(400).json({
+        error: 'Commercial registration must be 10 digits starting with 7 (unified number) or 1-5 (legacy).',
+      });
+    }
     const chosen = Array.isArray(specialties) ? specialties.filter(isValidCategory) : [];
     if (chosen.length === 0) {
       return res.status(400).json({ error: 'Choose at least one specialty.' });
@@ -65,7 +76,7 @@ router.post(
       shopName: String(shopName).trim(),
       city,
       specialties: chosen,
-      licenseNumber: String(licenseNumber || '').trim(),
+      licenseNumber: cr,
       shopPhoto: mongoose.isValidObjectId(shopPhoto) ? shopPhoto : undefined,
       status: 'pending',
       appliedAt: new Date(),
