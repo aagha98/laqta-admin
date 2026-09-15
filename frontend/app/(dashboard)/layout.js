@@ -35,6 +35,9 @@ export default async function DashboardLayout({ children }) {
               <Link href="/users" className="hover:text-ink">
                 Users
               </Link>
+              <Link href="/suppliers" className="hover:text-ink">
+                Suppliers
+              </Link>
             </nav>
           </div>
           <LogoutButton />

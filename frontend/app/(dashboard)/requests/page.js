@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 
-const STATUSES = ['submitted', 'underReview', 'matched', 'completed', 'cancelled'];
+const STATUSES = ['submitted', 'underReview', 'matched', 'completed', 'cancelled', 'expired'];
 const TYPES = ['spareParts', 'sellCar'];
 
 const STATUS_STYLES = {
@@ -11,6 +11,7 @@ const STATUS_STYLES = {
   matched: 'bg-purple-100 text-purple-800',
   completed: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-700',
+  expired: 'bg-gray-200 text-gray-700',
 };
 
 const EMPTY_OFFER_FORM = {

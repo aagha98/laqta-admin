@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import Request from '../models/Request.js';
+import Request, { REQUEST_STATUSES } from '../models/Request.js';
 import User from '../models/User.js';
 import Offer from '../models/Offer.js';
 import { requireAdmin } from '../auth.js';
@@ -7,24 +7,46 @@ import { asyncHandler } from '../asyncHandler.js';
 
 const router = Router();
 
-const VALID_STATUSES = ['submitted', 'underReview', 'matched', 'completed', 'cancelled'];
-
 router.get(
   '/stats',
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const [totalUsers, totalRequests, submitted, underReview, matched, completed, cancelled] =
-      await Promise.all([
-        User.countDocuments(),
-        Request.countDocuments(),
-        Request.countDocuments({ status: 'submitted' }),
-        Request.countDocuments({ status: 'underReview' }),
-        Request.countDocuments({ status: 'matched' }),
-        Request.countDocuments({ status: 'completed' }),
-        Request.countDocuments({ status: 'cancelled' }),
-      ]);
+    const [
+      totalUsers,
+      totalRequests,
+      submitted,
+      underReview,
+      matched,
+      completed,
+      cancelled,
+      expired,
+      pendingSuppliers,
+      approvedSuppliers,
+    ] = await Promise.all([
+      User.countDocuments(),
+      Request.countDocuments(),
+      Request.countDocuments({ status: 'submitted' }),
+      Request.countDocuments({ status: 'underReview' }),
+      Request.countDocuments({ status: 'matched' }),
+      Request.countDocuments({ status: 'completed' }),
+      Request.countDocuments({ status: 'cancelled' }),
+      Request.countDocuments({ status: 'expired' }),
+      User.countDocuments({ role: 'supplier', 'supplier.status': 'pending' }),
+      User.countDocuments({ role: 'supplier', 'supplier.status': 'approved' }),
+    ]);
 
-    res.json({ totalUsers, totalRequests, submitted, underReview, matched, completed, cancelled });
+    res.json({
+      totalUsers,
+      totalRequests,
+      submitted,
+      underReview,
+      matched,
+      completed,
+      cancelled,
+      expired,
+      pendingSuppliers,
+      approvedSuppliers,
+    });
   }),
 );
 
@@ -50,7 +72,7 @@ router.patch(
   requireAdmin,
   asyncHandler(async (req, res) => {
     const { status } = req.body || {};
-    if (!VALID_STATUSES.includes(status)) {
+    if (!REQUEST_STATUSES.includes(status)) {
       return res.status(400).json({ error: 'Invalid status.' });
     }
 
@@ -80,7 +102,9 @@ router.get(
   '/:id/offers',
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const offers = await Offer.find({ request: req.params.id }).sort({ createdAt: -1 });
+    const offers = await Offer.find({ request: req.params.id })
+      .populate('supplier', 'fullName phoneNumber supplier.shopName')
+      .sort({ createdAt: -1 });
     res.json({ offers });
   }),
 );

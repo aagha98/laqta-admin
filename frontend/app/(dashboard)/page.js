@@ -25,6 +25,9 @@ export default async function DashboardPage() {
         <StatCard label="Matched" value={stats.matched} />
         <StatCard label="Completed" value={stats.completed} />
         <StatCard label="Cancelled" value={stats.cancelled} />
+        <StatCard label="Expired" value={stats.expired} />
+        <StatCard label="Suppliers pending" value={stats.pendingSuppliers} />
+        <StatCard label="Suppliers approved" value={stats.approvedSuppliers} />
       </div>
     </div>
   );
