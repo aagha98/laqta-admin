@@ -17,7 +17,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const token = await requireAdminToken();
-  const data = await apiFetch('/api/admin/dashboard', token);
+  let data;
+  try {
+    data = await apiFetch('/api/admin/dashboard', token);
+  } catch (error) {
+    return <BackendUnavailable message={error.message} />;
+  }
   const { kpis, categoryCounts, series, attention, recent, statusCounts } = data;
 
   const categorySlices = Object.entries(categoryCounts)
@@ -215,5 +220,22 @@ function AttentionItem({ href, tone, icon, title, meta, cta }) {
         {cta}
       </Link>
     </li>
+  );
+}
+
+function BackendUnavailable({ message }) {
+  return (
+    <GlassCard>
+      <EmptyState
+        icon="⚠"
+        title="تعذّر الوصول إلى الخادم"
+        body={`قد يكون الخادم يستيقظ من وضع السكون (يستغرق حتى 30 ثانية). أعد تحميل الصفحة بعد لحظات. (${message})`}
+      />
+      <div className="flex justify-center">
+        <Link href="/" className="btn-secondary">
+          إعادة المحاولة
+        </Link>
+      </div>
+    </GlassCard>
   );
 }
