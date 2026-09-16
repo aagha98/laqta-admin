@@ -27,6 +27,8 @@ export default function LoginPage() {
       }
       router.push('/');
       router.refresh();
+    } catch {
+      setError('تعذر الاتصال بالخادم. تأكد من الإنترنت وحاول مرة أخرى.');
     } finally {
       setLoading(false);
     }
@@ -75,7 +77,7 @@ export default function LoginPage() {
         {error && <p className="mb-4 text-sm text-danger">{error}</p>}
 
         <button type="submit" disabled={loading} className="btn-primary w-full !py-2.5">
-          {loading ? 'جارٍ الدخول…' : 'تسجيل الدخول'}
+          {loading ? 'جارٍ الدخول… (قد يستغرق 30 ثانية إذا كان الخادم نائمًا)' : 'تسجيل الدخول'}
         </button>
       </form>
     </div>

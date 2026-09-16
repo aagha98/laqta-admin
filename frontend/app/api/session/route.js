@@ -4,15 +4,27 @@ import { BACKEND_URL } from '../../../lib/apiClient';
 export async function POST(request) {
   const body = await request.json().catch(() => ({}));
 
-  const backendResponse = await fetch(`${BACKEND_URL}/api/auth/admin/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  let backendResponse;
+  try {
+    backendResponse = await fetch(`${BACKEND_URL}/api/auth/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      // Render's free tier sleeps; the first request can take ~25s to wake it.
+      signal: AbortSignal.timeout(45000),
+    });
+  } catch {
+    return NextResponse.json(
+      { error: 'الخادم لا يستجيب الآن (قد يكون يستيقظ من السكون). حاول مرة أخرى بعد 30 ثانية.' },
+      { status: 503 },
+    );
+  }
   const data = await backendResponse.json().catch(() => ({}));
 
   if (!backendResponse.ok) {
-    return NextResponse.json(data, { status: backendResponse.status });
+    const error =
+      backendResponse.status === 401 ? 'البريد أو كلمة المرور غير صحيحة.' : data.error || 'تعذر تسجيل الدخول.';
+    return NextResponse.json({ error }, { status: backendResponse.status });
   }
 
   const response = NextResponse.json({ ok: true });
