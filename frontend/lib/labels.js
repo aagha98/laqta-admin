@@ -66,13 +66,16 @@ export function formatDay(value) {
 
 export function timeAgo(value) {
   if (!value) return '';
-  const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60000);
+  const diffMs = Date.now() - new Date(value).getTime();
+  const minutes = Math.floor(diffMs / 60000);
   if (minutes < 1) return 'الآن';
   if (minutes < 60) return `قبل ${minutes} د`;
-  const hours = Math.round(minutes / 60);
+  const hours = Math.floor(minutes / 60);
   if (hours < 24) return `قبل ${hours} س`;
-  const days = Math.round(hours / 24);
-  return `قبل ${days} ي`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'أمس';
+  if (days < 7) return `قبل ${days} أيام`;
+  return formatDay(value);
 }
 
 export function timeLeft(value) {
