@@ -30,7 +30,10 @@ export default async function DashboardPage() {
     .filter((s) => s.value > 0);
 
   const attentionCount =
-    attention.pendingSuppliers.length + attention.expiringSoon.length + attention.awaitingRating.length;
+    attention.pendingSuppliers.length +
+    attention.expiringSoon.length +
+    attention.awaitingRating.length +
+    (attention.openDisputes?.length ?? 0);
 
   return (
     <div className="space-y-6">
@@ -116,6 +119,17 @@ export default async function DashboardPage() {
             <EmptyState icon="✓" title="كل شيء تحت السيطرة" body="لا توجد بنود معلّقة الآن." />
           ) : (
             <ul className="space-y-2">
+              {(attention.openDisputes ?? []).map((d) => (
+                <AttentionItem
+                  key={d._id}
+                  href="/disputes"
+                  tone="danger"
+                  icon="⚑"
+                  title={`بلاغ على صفقة: ${d.request?.title ?? '—'}`}
+                  meta={`${d.request?.shortCode ? `#${d.request.shortCode} • ` : ''}${timeAgo(d.createdAt)}`}
+                  cta="مراجعة"
+                />
+              ))}
               {attention.pendingSuppliers.map((u) => (
                 <AttentionItem
                   key={u._id}

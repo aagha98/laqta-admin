@@ -7,7 +7,10 @@ import otpRoutes from './routes/otp.js';
 import googleAuthRoutes from './routes/googleAuth.js';
 import adminAuthRoutes from './routes/adminAuth.js';
 import usersRoutes from './routes/users.js';
-import requestsRoutes from './routes/requests.js';
+import requestsRoutes, { supplierProfileRouter } from './routes/requests.js';
+import publicRoutes from './routes/public.js';
+import adminDisputesRoutes from './routes/adminDisputes.js';
+import { startJobs } from './jobs.js';
 import supplierRoutes from './routes/supplier.js';
 import photosRoutes from './routes/photos.js';
 import notificationsRoutes from './routes/notifications.js';
@@ -30,6 +33,8 @@ app.use('/api/auth/google', googleAuthRoutes);
 app.use('/api/auth/admin', adminAuthRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/requests', requestsRoutes);
+app.use('/api/suppliers', supplierProfileRouter);
+app.use('/api/public', publicRoutes);
 app.use('/api/supplier', supplierRoutes);
 app.use('/api/photos', photosRoutes);
 app.use('/api/notifications', notificationsRoutes);
@@ -39,6 +44,7 @@ app.use('/api/admin/users', adminUsersRoutes);
 app.use('/api/admin/suppliers', adminSuppliersRoutes);
 app.use('/api/admin/dashboard', adminDashboardRoutes);
 app.use('/api/admin/offers', adminOffersRoutes);
+app.use('/api/admin/disputes', adminDisputesRoutes);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
@@ -68,6 +74,7 @@ async function connectWithRetry(attempt = 1) {
 connectWithRetry()
   .then(() => seedAdmin())
   .then(() => {
+    startJobs();
     app.listen(PORT, () => console.log(`Backend API listening on port ${PORT}`));
   })
   .catch((error) => {

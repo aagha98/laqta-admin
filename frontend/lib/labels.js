@@ -11,12 +11,21 @@ export const OFFER_STATUS = {
   pending: { label: 'بانتظار العميل', tone: 'accent' },
   accepted: { label: 'مقبول', tone: 'success' },
   rejected: { label: 'لم يُختر', tone: 'muted' },
+  withdrawn: { label: 'مسحوب', tone: 'danger' },
 };
 
 export const SUPPLIER_STATUS = {
   pending: { label: 'قيد المراجعة', tone: 'accent' },
   approved: { label: 'معتمد', tone: 'success' },
   rejected: { label: 'مرفوض', tone: 'danger' },
+};
+
+export const DISPUTE_REASON = {
+  notDelivered: 'لم يستلم القطعة',
+  wrongPart: 'قطعة غير مطابقة',
+  damaged: 'تالفة أو مخالفة للوصف',
+  priceChanged: 'المورد طلب سعرًا أعلى',
+  other: 'سبب آخر',
 };
 
 export const CATEGORY = {

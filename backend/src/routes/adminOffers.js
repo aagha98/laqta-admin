@@ -14,7 +14,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { status, flagged } = req.query;
     const filter = {};
-    if (status && ['pending', 'accepted', 'rejected'].includes(status)) filter.status = status;
+    if (status && ['pending', 'accepted', 'rejected', 'withdrawn'].includes(status)) filter.status = status;
 
     const offers = await Offer.find(filter)
       .sort({ createdAt: -1 })

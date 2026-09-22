@@ -8,6 +8,13 @@ export const NOTIFICATION_TYPES = [
   'supplierApproved', // supplier: your application was approved
   'supplierRejected', // supplier: your application was rejected
   'requestExpired', // buyer: no offers arrived within the window
+  'requestExpiringSoon', // buyer: a few hours left and still no offers
+  'newQuestion', // supplier: the buyer asked about your offer
+  'newAnswer', // buyer: the supplier answered your question
+  'offerWithdrawn', // buyer: a supplier pulled their offer
+  'requestClarified', // supplier: the buyer added details to a request you offered on
+  'disputeOpened', // supplier: the buyer reported a problem with the deal
+  'disputeResolved', // both: the admin closed the dispute
 ];
 
 const NotificationSchema = new mongoose.Schema(

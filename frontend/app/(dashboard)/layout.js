@@ -20,10 +20,14 @@ export default async function DashboardLayout({ children }) {
   const token = await requireAdminToken();
   let counts = {};
   try {
-    const stats = await apiFetch('/api/admin/requests/stats', token);
+    const [stats, disputes] = await Promise.all([
+      apiFetch('/api/admin/requests/stats', token),
+      apiFetch('/api/admin/disputes?status=open', token).catch(() => ({ disputes: [] })),
+    ]);
     counts = {
       activeRequests: (stats.submitted ?? 0) + (stats.underReview ?? 0),
       pendingSuppliers: stats.pendingSuppliers ?? 0,
+      openDisputes: disputes.disputes?.length ?? 0,
     };
   } catch {
     counts = {};

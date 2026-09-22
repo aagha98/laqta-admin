@@ -8,6 +8,10 @@ const SupplierProfileSchema = new mongoose.Schema(
     shopName: { type: String, required: true },
     city: { type: String, required: true },
     specialties: { type: [String], enum: CATEGORIES, default: [] },
+    // Extra cities the yard ships to, on top of its own city.
+    serviceCities: { type: [String], default: [] },
+    // Off = keep the account but stop matching new requests (holiday, stock-out).
+    isAvailable: { type: Boolean, default: true },
     licenseNumber: { type: String, default: '' },
     shopPhoto: { type: mongoose.Schema.Types.ObjectId, ref: 'Photo' },
     status: { type: String, enum: SUPPLIER_STATUSES, default: 'pending' },
@@ -36,6 +40,7 @@ const UserSchema = new mongoose.Schema(
     city: { type: String, default: '' },
     role: { type: String, enum: ['buyer', 'supplier'], default: 'buyer', index: true },
     supplier: { type: SupplierProfileSchema },
+    deletedAt: { type: Date },
   },
   {
     timestamps: true,
@@ -51,7 +56,12 @@ UserSchema.virtual('supplierRating').get(function supplierRating() {
 });
 
 UserSchema.methods.isApprovedSupplier = function isApprovedSupplier() {
-  return this.role === 'supplier' && this.supplier?.status === 'approved';
+  return this.role === 'supplier' && this.supplier?.status === 'approved' && !this.deletedAt;
+};
+
+UserSchema.methods.coversCity = function coversCity(city) {
+  if (!this.supplier || !city) return false;
+  return this.supplier.city === city || this.supplier.serviceCities.includes(city);
 };
 
 // What a buyer is allowed to see about a supplier before accepting an offer:
@@ -64,6 +74,23 @@ export function publicSupplierSummary(user) {
     supplierReviewCount: user.supplier.ratingCount,
     completedDeals: user.supplier.completedDeals,
     verified: user.supplier.status === 'approved',
+  };
+}
+
+// The profile a buyer may open once an offer is accepted.
+export function publicSupplierProfile(user) {
+  if (!user?.supplier) return null;
+  return {
+    id: user._id,
+    shopName: user.supplier.shopName,
+    city: user.supplier.city,
+    serviceCities: user.supplier.serviceCities,
+    specialties: user.supplier.specialties,
+    rating: user.supplierRating ?? 0,
+    reviewCount: user.supplier.ratingCount,
+    completedDeals: user.supplier.completedDeals,
+    memberSince: user.supplier.reviewedAt || user.createdAt,
+    isAvailable: user.supplier.isAvailable,
   };
 }
 

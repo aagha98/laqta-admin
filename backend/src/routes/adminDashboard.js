@@ -2,6 +2,7 @@ import { Router } from 'express';
 import Request from '../models/Request.js';
 import Offer from '../models/Offer.js';
 import User from '../models/User.js';
+import Dispute from '../models/Dispute.js';
 import { requireAdmin } from '../auth.js';
 import { asyncHandler } from '../asyncHandler.js';
 import { CATEGORIES } from '../constants/categories.js';
@@ -53,6 +54,7 @@ router.get(
       awaitingRating,
       recentRequests,
       recentOffers,
+      openDisputes,
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ role: { $ne: 'supplier' } }),
@@ -131,6 +133,10 @@ router.get(
         .limit(6)
         .select('price status supplierName createdAt request')
         .populate('request', 'title'),
+      Dispute.find({ status: 'open' })
+        .sort({ createdAt: 1 })
+        .limit(5)
+        .populate('request', 'title shortCode'),
     ]);
 
     const requestsByDay = new Map(requestSeries.map((r) => [r._id, r.count]));
@@ -170,6 +176,7 @@ router.get(
         offersToday,
         completedDeals,
         avgFirstOfferMinutes,
+        openDisputes: openDisputes.length,
         acceptanceRate: totalOffers ? Math.round((acceptedOffers / totalOffers) * 1000) / 10 : 0,
       },
       statusCounts,
@@ -179,6 +186,7 @@ router.get(
         pendingSuppliers: pendingSupplierList,
         expiringSoon,
         awaitingRating,
+        openDisputes,
       },
       recent: {
         requests: recentRequests,

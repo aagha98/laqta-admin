@@ -1,5 +1,21 @@
 import mongoose from 'mongoose';
 
+export const OFFER_STATUSES = ['pending', 'accepted', 'rejected', 'withdrawn'];
+export const MAX_OFFER_PHOTOS = 4;
+export const MAX_QUESTIONS_PER_OFFER = 5;
+
+// A buyer question and the supplier's answer, kept on the offer so the
+// exchange stays anonymous and visible to the admin.
+const QuestionSchema = new mongoose.Schema(
+  {
+    text: { type: String, required: true },
+    answer: { type: String, default: '' },
+    askedAt: { type: Date, default: Date.now },
+    answeredAt: { type: Date },
+  },
+  { _id: true },
+);
+
 const OfferSchema = new mongoose.Schema(
   {
     request: { type: mongoose.Schema.Types.ObjectId, ref: 'Request', required: true, index: true },
@@ -17,9 +33,13 @@ const OfferSchema = new mongoose.Schema(
     conditionDescription: { type: String, default: '' },
     qualityScore: { type: Number, default: 0 },
     warrantyDays: { type: Number, default: 30 },
+    shippingAvailable: { type: Boolean, default: false },
+    shippingCost: { type: Number, default: 0 },
     photos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Photo' }],
+    questions: { type: [QuestionSchema], default: [] },
     recommended: { type: Boolean, default: false },
-    status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
+    status: { type: String, enum: OFFER_STATUSES, default: 'pending' },
+    withdrawnAt: { type: Date },
   },
   { timestamps: true },
 );

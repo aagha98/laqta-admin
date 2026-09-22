@@ -25,14 +25,21 @@ function getBearerToken(req) {
   return match ? match[1] : null;
 }
 
+// Tokens outlive account deletion (30 days), so a cheap existence check
+// keeps deleted accounts out even with a valid token.
 export function requireUser(req, res, next) {
   const token = getBearerToken(req);
   const payload = token ? verifyToken(token) : null;
   if (!payload || payload.role !== 'user') {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  req.userId = payload.sub;
-  next();
+  User.exists({ _id: payload.sub, deletedAt: null })
+    .then((exists) => {
+      if (!exists) return res.status(401).json({ error: 'Unauthorized' });
+      req.userId = payload.sub;
+      next();
+    })
+    .catch(next);
 }
 
 // Loads the full user and rejects anyone who isn't an approved supplier.

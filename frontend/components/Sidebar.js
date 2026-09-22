@@ -8,6 +8,7 @@ const NAV = [
   { href: '/requests', label: 'طلبات القطع', icon: '⚙', badgeKey: 'activeRequests' },
   { href: '/suppliers', label: 'التشاليح والموردون', icon: '⌂', badgeKey: 'pendingSuppliers', badgeTone: 'accent' },
   { href: '/offers', label: 'العروض', icon: '◈' },
+  { href: '/disputes', label: 'البلاغات', icon: '⚑', badgeKey: 'openDisputes', badgeTone: 'accent' },
   { href: '/users', label: 'المستخدمون', icon: '☺' },
 ];
 
