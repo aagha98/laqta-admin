@@ -16,6 +16,8 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@laqta.sa}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-now}
       GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
+      # Mounted key file for local push testing (see .env).
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
       PORT: 4000
     depends_on:
       - mongo

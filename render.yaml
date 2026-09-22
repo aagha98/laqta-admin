@@ -21,6 +21,11 @@ services:
         sync: false
       # OAuth Web Client ID from Google Cloud Console — used as the audience
       # when verifying Google Sign-In tokens from the mobile app.
+      # Firebase service-account JSON (one line) for push notifications.
+      # Project settings > Service accounts > Generate new private key.
+      # Leave unset to disable push; in-app notifications keep working.
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
       - key: GOOGLE_WEB_CLIENT_ID
         sync: false
 

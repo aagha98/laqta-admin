@@ -11,6 +11,7 @@ import requestsRoutes, { supplierProfileRouter } from './routes/requests.js';
 import publicRoutes from './routes/public.js';
 import adminDisputesRoutes from './routes/adminDisputes.js';
 import { startJobs } from './jobs.js';
+import { initPush } from './push.js';
 import supplierRoutes from './routes/supplier.js';
 import photosRoutes from './routes/photos.js';
 import notificationsRoutes from './routes/notifications.js';
@@ -74,6 +75,7 @@ async function connectWithRetry(attempt = 1) {
 connectWithRetry()
   .then(() => seedAdmin())
   .then(() => {
+    initPush();
     startJobs();
     app.listen(PORT, () => console.log(`Backend API listening on port ${PORT}`));
   })

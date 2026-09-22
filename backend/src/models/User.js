@@ -40,6 +40,8 @@ const UserSchema = new mongoose.Schema(
     city: { type: String, default: '' },
     role: { type: String, enum: ['buyer', 'supplier'], default: 'buyer', index: true },
     supplier: { type: SupplierProfileSchema },
+    // FCM registration tokens, one per device the user signed in on.
+    deviceTokens: { type: [String], default: [], select: false },
     deletedAt: { type: Date },
   },
   {

@@ -47,6 +47,33 @@ router.put(
   }),
 );
 
+// Device tokens are per-install; the app registers on every launch and
+// unregisters on sign-out so a shared phone never gets the wrong pushes.
+router.post(
+  '/me/device-token',
+  requireUser,
+  asyncHandler(async (req, res) => {
+    const token = String(req.body?.token || '').trim();
+    if (token.length < 10) return res.status(400).json({ error: 'A device token is required.' });
+
+    // The same token may have been registered by a previous account on
+    // this device — move it rather than duplicating it.
+    await User.updateMany({ deviceTokens: token }, { $pull: { deviceTokens: token } });
+    await User.updateOne({ _id: req.userId }, { $addToSet: { deviceTokens: token } });
+    res.json({ ok: true });
+  }),
+);
+
+router.delete(
+  '/me/device-token',
+  requireUser,
+  asyncHandler(async (req, res) => {
+    const token = String(req.body?.token || '').trim();
+    if (token) await User.updateOne({ _id: req.userId }, { $pull: { deviceTokens: token } });
+    res.json({ ok: true });
+  }),
+);
+
 // Account deletion (Google Play requirement). Personal data is removed and
 // the login identifiers are released; completed deals stay as anonymized
 // history so other users' ratings and records remain consistent.
@@ -67,6 +94,7 @@ router.delete(
     );
     await Notification.deleteMany({ user: user._id });
 
+    user.deviceTokens = [];
     user.deletedAt = new Date();
     user.fullName = '';
     user.email = undefined;

@@ -3,3 +3,8 @@ node_modules/
 .env.local
 .next/
 *.log
+
+# Firebase service account key — never commit; set it as an env var instead.
+firebase-service-account.json
+**/firebase-service-account.json
+*-firebase-adminsdk-*.json
