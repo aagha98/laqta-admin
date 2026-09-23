@@ -1,5 +1,9 @@
 import fs from 'node:fs';
-import admin from 'firebase-admin';
+// firebase-admin v14 exposes only the modular API to ESM consumers: the
+// default export is the `app` namespace, so `admin.credential`/`admin.messaging`
+// don't exist. Import the subpaths instead.
+import { cert, initializeApp } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 import User from './models/User.js';
 
 // Credentials come from FIREBASE_SERVICE_ACCOUNT (the JSON key inline, how
@@ -37,7 +41,12 @@ export function initPush() {
     console.log('Push notifications are disabled (no Firebase credentials).');
     return null;
   }
-  app = admin.initializeApp({ credential: admin.credential.cert(credentials) });
+  try {
+    app = initializeApp({ credential: cert(credentials) });
+  } catch (error) {
+    console.error('Firebase credentials rejected; push disabled.', error.message);
+    return null;
+  }
   console.log('Push notifications enabled.');
   return app;
 }
@@ -91,7 +100,7 @@ export async function sendPush(userIds, type, data = {}) {
   };
 
   try {
-    const response = await admin.messaging().sendEachForMulticast(payload);
+    const response = await getMessaging(app).sendEachForMulticast(payload);
     const dead = [];
     response.responses.forEach((result, index) => {
       const code = result.error?.code;
