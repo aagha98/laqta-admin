@@ -49,7 +49,7 @@ Base URL: the `backend` service, port `4000`.
 
 | Method | Path                  | Auth          | Purpose                              |
 |--------|-----------------------|---------------|---------------------------------------|
-| POST   | `/api/auth/otp/request` | none        | Mock-send an OTP to a Saudi number     |
+| POST   | `/api/auth/otp/request` | none        | Send a one-time code to a Saudi number |
 | POST   | `/api/auth/otp/verify`  | none        | Verify code, creates the user if new, returns `{ token, user }` |
 | GET    | `/api/users/me`         | Bearer token | Get the signed-in user's profile      |
 | PUT    | `/api/users/me`         | Bearer token | Update profile fields                 |
@@ -62,10 +62,21 @@ Admin-only endpoints (`Authorization: Bearer <admin token>`, obtained from
 `GET /api/admin/requests`, `PATCH /api/admin/requests/:id`,
 `DELETE /api/admin/requests/:id`, `GET /api/admin/users`.
 
-OTP sending/verification is still mocked (any 6-digit code is accepted) — wire up a real
-SMS provider in `backend/src/routes/otp.js` before shipping. The mobile app itself still
-uses local `shared_preferences`, not this API — pointing `RequestsController` /
-`ProfileController` at these endpoints is the natural next step.
+### OTP
+
+Codes are six random digits, stored only as a bcrypt hash, valid for 5 minutes,
+capped at 5 wrong guesses and 5 sends per number per hour. A code is burned once
+used, so it cannot be replayed.
+
+Delivery goes through `backend/src/sms/`. `SMS_PROVIDER` selects the provider and
+has **no default** — leaving it unset fails OTP requests with a clear error rather
+than silently falling back. `console` prints the code to the server log instead of
+texting it, which is how local development and the test suite run; add a module
+next to `consoleProvider.js` and register it in `sms/index.js` to ship a real one.
+
+`OTP_TEST_NUMBERS` (`"551234567:123456,559876543:000000"`) lets specific numbers
+skip SMS and accept one fixed code — useful for automated tests and app-store
+reviewers. Leave it unset in production to disable the bypass entirely.
 
 ## Run locally without Docker
 

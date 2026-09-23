@@ -3,7 +3,6 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import { connectToDatabase } from './db.js';
 import { seedAdmin } from './seedAdmin.js';
-import otpRoutes from './routes/otp.js';
 import googleAuthRoutes from './routes/googleAuth.js';
 import adminAuthRoutes from './routes/adminAuth.js';
 import usersRoutes from './routes/users.js';
@@ -12,6 +11,7 @@ import publicRoutes from './routes/public.js';
 import adminDisputesRoutes from './routes/adminDisputes.js';
 import { startJobs } from './jobs.js';
 import { initPush } from './push.js';
+import firebasePhoneAuthRoutes from './routes/firebasePhoneAuth.js';
 import supplierRoutes from './routes/supplier.js';
 import photosRoutes from './routes/photos.js';
 import notificationsRoutes from './routes/notifications.js';
@@ -29,8 +29,8 @@ app.use(express.json({ limit: '3mb' }));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
-app.use('/api/auth', otpRoutes);
 app.use('/api/auth/google', googleAuthRoutes);
+app.use('/api/auth/firebase', firebasePhoneAuthRoutes);
 app.use('/api/auth/admin', adminAuthRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/requests', requestsRoutes);

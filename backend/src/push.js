@@ -1,53 +1,15 @@
-import fs from 'node:fs';
-// firebase-admin v14 exposes only the modular API to ESM consumers: the
-// default export is the `app` namespace, so `admin.credential`/`admin.messaging`
-// don't exist. Import the subpaths instead.
-import { cert, initializeApp } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
+import { getFirebaseApp } from './firebase.js';
 import User from './models/User.js';
-
-// Credentials come from FIREBASE_SERVICE_ACCOUNT (the JSON key inline, how
-// Render stores it) or FIREBASE_SERVICE_ACCOUNT_PATH (a file, for local
-// development). Without either, push is simply disabled and the in-app
-// notification feed still works.
-function loadCredentials() {
-  const inline = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (inline) {
-    try {
-      return JSON.parse(inline);
-    } catch {
-      console.error('FIREBASE_SERVICE_ACCOUNT is not valid JSON; push disabled.');
-      return null;
-    }
-  }
-  const path = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-  if (path && fs.existsSync(path)) {
-    try {
-      return JSON.parse(fs.readFileSync(path, 'utf8'));
-    } catch {
-      console.error(`Could not read ${path}; push disabled.`);
-      return null;
-    }
-  }
-  return null;
-}
 
 let app = null;
 
 export function initPush() {
   if (app) return app;
-  const credentials = loadCredentials();
-  if (!credentials) {
-    console.log('Push notifications are disabled (no Firebase credentials).');
-    return null;
-  }
-  try {
-    app = initializeApp({ credential: cert(credentials) });
-  } catch (error) {
-    console.error('Firebase credentials rejected; push disabled.', error.message);
-    return null;
-  }
-  console.log('Push notifications enabled.');
+  app = getFirebaseApp();
+  console.log(
+    app ? 'Push notifications enabled.' : 'Push notifications are disabled (no Firebase credentials).',
+  );
   return app;
 }
 

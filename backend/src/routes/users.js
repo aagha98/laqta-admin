@@ -5,6 +5,7 @@ import Offer from '../models/Offer.js';
 import Notification from '../models/Notification.js';
 import { requireUser } from '../auth.js';
 import { asyncHandler } from '../asyncHandler.js';
+import { PhoneTokenError, verifiedPhoneFromToken } from '../firebasePhone.js';
 
 const router = Router();
 
@@ -114,6 +115,44 @@ router.delete(
     await user.save();
 
     res.json({ ok: true });
+  }),
+);
+
+// Attaches a verified phone number to an account that signed up another way.
+// Google gives us a name and an email but never a number, and suppliers can
+// only reach a buyer by phone once a deal is struck — so an account without
+// one can receive offers it can never complete.
+router.post(
+  '/me/phone',
+  requireUser,
+  asyncHandler(async (req, res) => {
+    let phoneNumber;
+    try {
+      phoneNumber = await verifiedPhoneFromToken(req.body?.idToken);
+    } catch (error) {
+      if (error instanceof PhoneTokenError) {
+        return res.status(error.status).json({ error: error.message, code: error.code });
+      }
+      throw error;
+    }
+
+    // The number may already belong to an account created by phone sign-in.
+    // Merging two accounts is a decision for the user, not something to do
+    // silently, so refuse and say why.
+    const owner = await User.findOne({ phoneNumber, deletedAt: null }).select('_id');
+    if (owner && owner._id.toString() !== req.userId) {
+      return res.status(409).json({
+        error: 'This number is already linked to another account.',
+        code: 'PHONE_TAKEN',
+      });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'Not found.' });
+
+    user.phoneNumber = phoneNumber;
+    await user.save();
+    res.json({ user });
   }),
 );
 

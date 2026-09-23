@@ -31,6 +31,7 @@ router.post(
     const googleId = payload.sub;
     const email = payload.email;
     const fullName = payload.name || '';
+    const avatarUrl = payload.picture || '';
 
     let user = await User.findOne({ googleId });
     let isNewUser = false;
@@ -47,7 +48,26 @@ router.post(
 
     if (!user) {
       isNewUser = true;
-      user = await User.create({ googleId, email, fullName });
+      user = await User.create({ googleId, email, fullName, avatarUrl });
+    } else {
+      // Fill in anything the account is still missing, on every sign-in —
+      // an account linked by email, or created before we stored a field,
+      // shouldn't make the user retype what Google already told us. Never
+      // overwrite a value the user has set themselves.
+      let changed = false;
+      if (!user.fullName && fullName) {
+        user.fullName = fullName;
+        changed = true;
+      }
+      if (!user.email && email) {
+        user.email = email;
+        changed = true;
+      }
+      if (!user.avatarUrl && avatarUrl) {
+        user.avatarUrl = avatarUrl;
+        changed = true;
+      }
+      if (changed) await user.save();
     }
 
     const token = signUserToken(user._id.toString());

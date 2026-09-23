@@ -33,6 +33,9 @@ const UserSchema = new mongoose.Schema(
     googleId: { type: String, unique: true, sparse: true, index: true },
     fullName: { type: String, default: '' },
     email: { type: String },
+    // Profile picture URL from the identity provider (Google). Only a link —
+    // we don't copy the image, and the user can still upload their own.
+    avatarUrl: { type: String, default: '' },
     carMake: { type: String, default: '' },
     carModel: { type: String, default: '' },
     carYear: { type: String, default: '' },
